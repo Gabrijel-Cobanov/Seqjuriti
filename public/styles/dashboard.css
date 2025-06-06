@@ -1,0 +1,138 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+}
+
+.dashboard-box {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 800px;
+    text-align: center;
+}
+
+.dashboard-box h1 {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.dashboard-box p {
+    font-size: 1.1rem;
+    margin: 0.5rem 0;
+    color: #666;
+}
+
+.data-container {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 1rem 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#device-data {
+    text-align: left;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    color: #333;
+}
+
+.controls {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.controls button {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#refresh-btn {
+    background-color: #28a745;
+    color: white;
+}
+
+#refresh-btn:hover {
+    background-color: #218838;
+}
+
+#logout-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+#logout-btn:hover {
+    background-color: #c82333;
+}
+
+#arm-btn {
+    padding: 0.5rem;
+    font-size: 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#arm-btn:hover {
+    background-color: #0056b3;
+}
+
+#turnoff-btn {
+    padding: 0.5rem;
+    font-size: 1rem;
+    background-color: #e5b711;
+    color: rgb(19, 19, 19);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#turnoff-btn:hover {
+    background-color: #e38707;
+}
+
+#turnoff-btn:disabled {
+    color: #666;
+    background-color: #f4d3a5;
+}
+
+@media (max-width: 600px) {
+    .dashboard-box {
+        padding: 1rem;
+        margin: 10px;
+    }
+    
+    .controls {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .controls button {
+        width: 100%;
+        max-width: 200px;
+    }
+}
