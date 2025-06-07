@@ -120,6 +120,29 @@ body {
     background-color: #f4d3a5;
 }
 
+.map-container {
+    margin: 20px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.map-header {
+    background: #f5f5f5;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    font-weight: bold;
+}
+#device-map {
+    height: 300px;
+    width: 100%;
+}
+.location-info {
+    padding: 10px;
+    background: #f9f9f9;
+    font-size: 12px;
+    color: #666;
+}
+
 @media (max-width: 600px) {
     .dashboard-box {
         padding: 1rem;
@@ -136,3 +159,4 @@ body {
         max-width: 200px;
     }
 }
+

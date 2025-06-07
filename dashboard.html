@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Dashboard</title>
     <link rel="stylesheet" href="/styles/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 </head>
 <body>
     <div class="dashboard-box">
@@ -13,6 +14,14 @@
         <div class="data-container">
             <pre id="device-data">Loading device data...</pre>
         </div>
+        
+        <!-- Map Section -->
+        <div class="map-container">
+            <div class="map-header">Device Location</div>
+            <div id="device-map"></div>
+            <div class="location-info" id="location-info">Location data will appear here when available</div>
+        </div>
+        
         <div class="controls">
             <button id="refresh-btn">Refresh Data</button>
             <button id="logout-btn">Logout</button>
@@ -30,9 +39,55 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script>
         let userId = null;
         let refreshInterval = null;
+        let map = null;
+        let marker = null;
+
+        // Initialize map
+        function initMap() {
+            map = L.map('device-map').setView([45.815376, 15.983528], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        // Update map with device location
+        function updateMapLocation(deviceData) {
+            if (!map) return;
+
+            try {
+                const lat = deviceData.latitude && deviceData.latitude[0] ? parseFloat(deviceData.latitude[0].value) : null;
+                const lng = deviceData.longitude && deviceData.longitude[0] ? parseFloat(deviceData.longitude[0].value) : null;
+
+                if (lat && lng) {
+                    // Remove existing marker
+                    if (marker) {
+                        map.removeLayer(marker);
+                    }
+
+                    // Add new marker
+                    marker = L.marker([lat, lng]).addTo(map);
+                    
+                    // Center map on the location
+                    map.setView([lat, lng], 15);
+
+                    // Update location info
+                    const timestamp = deviceData.latitude[0].ts;
+                    const lastUpdate = new Date(timestamp).toLocaleString();
+                    document.getElementById('location-info').innerHTML = 
+                        `Latitude: ${lat}, Longitude: ${lng}<br>Last updated: ${lastUpdate}`;
+                } else {
+                    document.getElementById('location-info').textContent = 'No location data available';
+                }
+            } catch (error) {
+                console.log('Could not parse location data:', error);
+                document.getElementById('location-info').textContent = 'Error parsing location data';
+            }
+        }
 
         // Get user ID from URL
         function getUserIdFromUrl() {
@@ -88,6 +143,9 @@
                     
                     // Check alarm status from device data
                     checkAlarmStatus(data);
+                    
+                    // Update map with location data
+                    updateMapLocation(data);
                 } else {
                     throw new Error(data.error || 'Failed to fetch data');
                 }
@@ -200,6 +258,7 @@
         // Initialize the dashboard
         function init() {
             loadUserInfo();
+            initMap();
             fetchDeviceData();
             
             // Set up automatic refresh every 10 seconds
