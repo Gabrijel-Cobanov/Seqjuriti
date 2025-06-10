@@ -6,6 +6,13 @@
     <title>User Dashboard</title>
     <link rel="stylesheet" href="/styles/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        .status-armed { color: #dc3545; font-weight: bold; }
+        .status-disarmed { color: #28a745; font-weight: bold; }
+        .status-triggered { color: #ff0000; font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0.3; } }
+        .alarm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    </style>
 </head>
 <body>
     <div class="dashboard-box">
@@ -33,8 +40,7 @@
                 <p>Status: <span id="alarm-status">Disarmed</span></p>
             </div>
             <div class="alarm-buttons">
-                <button id="arm-btn" class="alarm-btn arm-btn">Arm</button>
-                <button id="turnoff-btn" class="alarm-btn turnoff-btn" disabled>Turn Off</button>
+                <button id="toggle-alarm-btn" class="alarm-btn">Arm</button>
             </div>
         </div>
     </div>
@@ -45,6 +51,7 @@
         let refreshInterval = null;
         let map = null;
         let marker = null;
+        let currentAlarmState = false; // false = disarmed, true = armed
 
         // Initialize map
         function initMap() {
@@ -142,7 +149,7 @@
                     document.getElementById('device-data').textContent = JSON.stringify(data, null, 2);
                     
                     // Check alarm status from device data
-                    checkAlarmStatus(data);
+                    updateAlarmStatus(data);
                     
                     // Update map with location data
                     updateMapLocation(data);
@@ -155,40 +162,53 @@
             }
         }
 
-        // Check alarm status and update UI accordingly
-        function checkAlarmStatus(deviceData) {
-            try {
-                // Look for alarm-related telemetry data
-                // Adjust these field names based on your actual ThingsBoard telemetry keys
-                const alarmArmed = deviceData.alarm_armed && deviceData.alarm_armed[0]?.value;
-                const alarmTriggered = deviceData.alarm_triggered && deviceData.alarm_triggered[0]?.value;
-                
-                const statusElement = document.getElementById('alarm-status');
-                const armBtn = document.getElementById('arm-btn');
-                const turnoffBtn = document.getElementById('turnoff-btn');
-                
-                if (alarmTriggered === true || alarmTriggered === 'true') {
-                    // Alarm is triggered
-                    statusElement.textContent = 'TRIGGERED';
-                    statusElement.className = 'status-triggered';
-                    armBtn.disabled = true;
-                    turnoffBtn.disabled = false;
-                } else if (alarmArmed === true || alarmArmed === 'true') {
-                    // Alarm is armed but not triggered
-                    statusElement.textContent = 'Armed';
-                    statusElement.className = 'status-armed';
-                    armBtn.disabled = true;
-                    turnoffBtn.disabled = true;
-                } else {
-                    // Alarm is disarmed
-                    statusElement.textContent = 'Disarmed';
-                    statusElement.className = 'status-disarmed';
-                    armBtn.disabled = false;
-                    turnoffBtn.disabled = true;
+        // Update alarm status and button based on received data
+        function updateAlarmStatus(deviceData) {
+            const statusElement = document.getElementById('alarm-status');
+            const toggleBtn = document.getElementById('toggle-alarm-btn');
+            
+            // Look for various possible alarm state field names in the telemetry data
+            let isArmed = false;
+            let isTriggered = false;
+            
+            if (deviceData['armed'] && deviceData['armed'][0]) {
+                const value = deviceData['armed'][0].value;
+                if (value === true || value === 'true' || value === 1 || value === '1' || value === 'armed') {
+                    isArmed = true;
                 }
-            } catch (error) {
-                console.log('Could not parse alarm status from device data:', error);
             }
+        
+            
+            // Check for triggered state
+            if (deviceData['motion_detected'] && deviceData['motion_detected'][0]) {
+                const value = deviceData['motion_detected'][0].value;
+                if (value === true || value === 'true' || value === 1 || value === '1') {
+                    isTriggered = true;
+                }
+            }
+            
+            // Update current state
+            currentAlarmState = isArmed;
+            
+            // Update UI based on state
+            if (isTriggered && isArmed) {
+                statusElement.textContent = 'TRIGGERED!';
+                statusElement.className = 'status-triggered';
+                toggleBtn.textContent = 'Disarm';
+                toggleBtn.disabled = false;
+            } else if (isArmed) {
+                statusElement.textContent = 'Armed';
+                statusElement.className = 'status-armed';
+                toggleBtn.textContent = 'Disarm';
+                toggleBtn.disabled = false;
+            } else {
+                statusElement.textContent = 'Disarmed';
+                statusElement.className = 'status-disarmed';
+                toggleBtn.textContent = 'Arm';
+                toggleBtn.disabled = false;
+            }
+            
+            console.log(`Alarm state updated - Armed: ${isArmed}, Triggered: ${isTriggered}`);
         }
 
         // Send command to ThingsBoard device
@@ -211,47 +231,67 @@
                 
                 if (response.ok) {
                     console.log('Command sent successfully:', result);
-                    // Refresh data after sending command
-                    setTimeout(fetchDeviceData, 1000);
+                    // Refresh data after sending command to see the change
+                    setTimeout(fetchDeviceData, 2000);
+                    return true;
                 } else {
                     throw new Error(result.error || 'Failed to send command');
                 }
             } catch (error) {
                 console.error('Error sending device command:', error);
                 alert(`Error: ${error.message}`);
+                return false;
             }
         }
 
-        // Arm the alarm
-        async function armAlarm() {
-            const armBtn = document.getElementById('arm-btn');
-            armBtn.disabled = true;
-            armBtn.textContent = 'Arming...';
+        // Toggle alarm state (arm/disarm)
+        async function toggleAlarm() {
+            const toggleBtn = document.getElementById('toggle-alarm-btn');
+            const originalText = toggleBtn.textContent;
+            
+            // Disable button during operation
+            toggleBtn.disabled = true;
+            toggleBtn.textContent = currentAlarmState ? 'Disarming...' : 'Arming...';
             
             try {
-                await sendDeviceCommand('arm_alarm', { armed: true });
-                document.getElementById('alarm-status').textContent = 'Armed';
-                document.getElementById('alarm-status').className = 'status-armed';
+                let success = false;
+                
+                if (currentAlarmState) {
+                    // Currently armed, so disarm
+                    success = await sendDeviceCommand('disarmDevice', { 
+                        armed: false, 
+                    });
+                } else {
+                    // Currently disarmed, so arm
+                    success = await sendDeviceCommand('armDevice', { 
+                        armed: true, 
+                    });
+                }
+                
+                if (success) {
+                    // Update local state immediately for better UX
+                    currentAlarmState = !currentAlarmState;
+                    const statusElement = document.getElementById('alarm-status');
+                    
+                    if (currentAlarmState) {
+                        statusElement.textContent = 'Armed';
+                        statusElement.className = 'status-armed';
+                        toggleBtn.textContent = 'Disarm';
+                    } else {
+                        statusElement.textContent = 'Disarmed';
+                        statusElement.className = 'status-disarmed';
+                        toggleBtn.textContent = 'Arm';
+                    }
+                }
+                
             } catch (error) {
-                armBtn.disabled = false;
-                armBtn.textContent = 'Arm';
-            }
-        }
-
-        // Turn off the alarm
-        async function turnOffAlarm() {
-            const turnoffBtn = document.getElementById('turnoff-btn');
-            turnoffBtn.disabled = true;
-            turnoffBtn.textContent = 'Turning Off...';
-            
-            try {
-                await sendDeviceCommand('turn_off_alarm', { armed: false, triggered: false });
-                document.getElementById('alarm-status').textContent = 'Disarmed';
-                document.getElementById('alarm-status').className = 'status-disarmed';
-                document.getElementById('arm-btn').disabled = false;
-            } catch (error) {
-                turnoffBtn.disabled = false;
-                turnoffBtn.textContent = 'Turn Off';
+                console.error('Error toggling alarm:', error);
+            } finally {
+                // Re-enable button
+                toggleBtn.disabled = false;
+                if (toggleBtn.textContent.includes('...')) {
+                    toggleBtn.textContent = originalText;
+                }
             }
         }
 
@@ -261,14 +301,13 @@
             initMap();
             fetchDeviceData();
             
-            // Set up automatic refresh every 10 seconds
-            refreshInterval = setInterval(fetchDeviceData, 10000);
+            // Set up automatic refresh every 5 seconds to see state changes quickly
+            refreshInterval = setInterval(fetchDeviceData, 5000);
             
             // Set up event listeners
             document.getElementById('refresh-btn').addEventListener('click', fetchDeviceData);
             document.getElementById('logout-btn').addEventListener('click', logout);
-            document.getElementById('arm-btn').addEventListener('click', armAlarm);
-            document.getElementById('turnoff-btn').addEventListener('click', turnOffAlarm);
+            document.getElementById('toggle-alarm-btn').addEventListener('click', toggleAlarm);
         }
 
         // Logout function

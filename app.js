@@ -24,8 +24,8 @@ const users = [
     id: 2, 
     username: 'bob', 
     password: 'bobpass', 
-    deviceToken: 'bob-device-token',
-    deviceId: 'bob-device-id'
+    deviceToken: 'jjl0jhykAJF1miCTHxMB',
+    deviceId: '353caeb0-416f-11f0-a544-db21b46190ed'
   },
   { 
     id: 3, 
@@ -207,38 +207,6 @@ app.get('/api/user/:id/device-data-simple', async (req, res) => {
   }
 });
 
-// Debug endpoint to list devices (to help find correct device IDs)
-app.get('/api/debug/devices', async (req, res) => {
-  const userId = 1; // Use alice's token for debugging
-  const jwtToken = userTokens.get(userId);
-  
-  if (!jwtToken) {
-    return res.status(401).json({ error: 'Please login first to get JWT token' });
-  }
-
-  try {
-    const devicesUrl = `${THINGSBOARD_HOST}/api/tenant/devices?pageSize=50&page=0`;
-    console.log('Fetching devices from:', devicesUrl);
-    
-    const response = await axios.get(devicesUrl, {
-      headers: {
-        'X-Authorization': `Bearer ${jwtToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    });
-    
-    console.log('Available devices:', response.data);
-    res.json(response.data);
-  } catch (error) {
-    console.error('Error fetching devices:', error.response?.data || error.message);
-    res.status(error.response?.status || 500).json({ 
-      error: 'Could not fetch devices', 
-      details: error.response?.data || error.message 
-    });
-  }
-});
-
 // Send command to ThingsBoard device
 app.post('/api/user/:id/send-command', async (req, res) => {
   const userId = parseInt(req.params.id);
@@ -315,39 +283,6 @@ app.post('/api/user/:id/send-command', async (req, res) => {
         details: error.response?.data || error.message
       });
     }
-  }
-});
-
-// Additional debug endpoint to get device details
-app.get('/api/debug/device/:deviceId', async (req, res) => {
-  const userId = 1; // Use alice's token for debugging
-  const jwtToken = userTokens.get(userId);
-  const deviceId = req.params.deviceId;
-  
-  if (!jwtToken) {
-    return res.status(401).json({ error: 'Please login first to get JWT token' });
-  }
-
-  try {
-    const deviceUrl = `${THINGSBOARD_HOST}/api/device/${deviceId}`;
-    console.log('Fetching device details from:', deviceUrl);
-    
-    const response = await axios.get(deviceUrl, {
-      headers: {
-        'X-Authorization': `Bearer ${jwtToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    });
-    
-    console.log('Device details:', response.data);
-    res.json(response.data);
-  } catch (error) {
-    console.error('Error fetching device details:', error.response?.data || error.message);
-    res.status(error.response?.status || 500).json({ 
-      error: 'Could not fetch device details', 
-      details: error.response?.data || error.message 
-    });
   }
 });
 

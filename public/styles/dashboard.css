@@ -85,41 +85,6 @@ body {
     background-color: #c82333;
 }
 
-#arm-btn {
-    padding: 0.5rem;
-    font-size: 1rem;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-#arm-btn:hover {
-    background-color: #0056b3;
-}
-
-#turnoff-btn {
-    padding: 0.5rem;
-    font-size: 1rem;
-    background-color: #e5b711;
-    color: rgb(19, 19, 19);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-#turnoff-btn:hover {
-    background-color: #e38707;
-}
-
-#turnoff-btn:disabled {
-    color: #666;
-    background-color: #f4d3a5;
-}
-
 .map-container {
     margin: 20px 0;
     border: 1px solid #ddd;
