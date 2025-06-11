@@ -18,7 +18,7 @@ const users = [
     username: 'alice', 
     password: 'pass123', 
     deviceToken: 'jjl0jhykAJF1miCTHxMB',
-    deviceId: '353caeb0-416f-11f0-a544-db21b46190ed' // Replace with actual device ID from ThingsBoard
+    deviceId: '353caeb0-416f-11f0-a544-db21b46190ed'
   },
   { 
     id: 2, 
@@ -114,7 +114,6 @@ app.get('/api/user/:id/device-data', async (req, res) => {
   }
 
   try {
-    // Fixed: Use correct telemetry endpoint format
     const telemetryUrl = `${THINGSBOARD_HOST}/api/plugins/telemetry/DEVICE/${user.deviceId}/values/timeseries`;
     
     console.log('Requesting URL:', telemetryUrl);
@@ -174,7 +173,7 @@ app.get('/api/user/:id/device-data', async (req, res) => {
   }
 });
 
-// Alternative endpoint using device token (simpler approach)
+// Alternative endpoint using device token
 app.get('/api/user/:id/device-data-simple', async (req, res) => {
   const userId = parseInt(req.params.id);
   const user = users.find(u => u.id === userId);
@@ -183,7 +182,6 @@ app.get('/api/user/:id/device-data-simple', async (req, res) => {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  // Fixed: Use correct device token API endpoint
   const deviceToken = user.deviceToken;
   const url = `${THINGSBOARD_HOST}/api/v1/${deviceToken}/telemetry`;
 
@@ -263,9 +261,6 @@ app.post('/api/user/:id/send-command', async (req, res) => {
         [`${command}_timestamp`]: Date.now(),
         ...params
       };
-
-      console.log('Sending telemetry to:', telemetryUrl);
-      console.log('Telemetry Payload:', telemetryPayload);
 
       const telemetryResponse = await axios.post(telemetryUrl, telemetryPayload, {
         headers: {

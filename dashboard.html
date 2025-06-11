@@ -18,9 +18,6 @@
     <!-- Main Dashboard Container -->
     <div class="dashboard-container">
         <div class="dashboard-box">
-            
-            
-            <!-- Alarm Controls Section - Now at the top -->
             <div class="alarm-controls">
                 <h3>Alarm Control</h3>
                 <div class="alarm-status">
@@ -31,7 +28,6 @@
                 </div>
             </div>
             
-            <!-- Telemetry History Section -->
             <div class="telemetry-history">
                 <h3>Telemetry History (Last 5 Readings)</h3>
                 <div id="telemetry-table-container">
@@ -39,14 +35,12 @@
                 </div>
             </div>
             
-            <!-- Map Section -->
             <div class="map-container">
                 <div class="map-header">Device Location</div>
                 <div id="device-map"></div>
                 <div class="location-info" id="location-info">Location data will appear here when available</div>
             </div>
             
-            <!-- Controls Section - Refresh button now below alarm controls -->
             <div class="controls">
                 <button id="refresh-btn" class="btn">Refresh Data</button>
             </div>
@@ -59,8 +53,8 @@
         let refreshInterval = null;
         let map = null;
         let marker = null;
-        let currentAlarmState = false; // false = disarmed, true = armed
-        let telemetryHistory = []; // Store telemetry history
+        let currentAlarmState = false;
+        let telemetryHistory = [];
 
         // Initialize map
         function initMap() {
@@ -108,7 +102,6 @@
         // Update telemetry history table
         function updateTelemetryHistory(deviceData) {
             try {
-                // Extract current telemetry data
                 const lat = deviceData.latitude && deviceData.latitude[0] ? parseFloat(deviceData.latitude[0].value) : null;
                 const lng = deviceData.longitude && deviceData.longitude[0] ? parseFloat(deviceData.longitude[0].value) : null;
                 
@@ -124,19 +117,13 @@
                     motionDetected = value === true || value === 'true' || value === 1 || value === '1';
                 }
                 
-                // Get timestamp - use the most recent one available
                 let timestamp = Date.now();
-                if (deviceData.latitude && deviceData.latitude[0] && deviceData.latitude[0].ts) {
-                    timestamp = deviceData.latitude[0].ts;
-                } else if (deviceData.longitude && deviceData.longitude[0] && deviceData.longitude[0].ts) {
-                    timestamp = deviceData.longitude[0].ts;
-                } else if (deviceData.armed && deviceData.armed[0] && deviceData.armed[0].ts) {
-                    timestamp = deviceData.armed[0].ts;
-                } else if (deviceData.motion_detected && deviceData.motion_detected[0] && deviceData.motion_detected[0].ts) {
-                    timestamp = deviceData.motion_detected[0].ts;
+                if (deviceData.disarmDevice_timestamp && deviceData.disarmDevice_timestamp[0]) {
+                    timestamp = deviceData.disarmDevice_timestamp[0].ts;
+                } else if (deviceData.armDevice_timestamp && deviceData.armDevice_timestamp[0]) {
+                    timestamp = deviceData.armDevice_timestamp[0].ts;
                 }
 
-                // Create telemetry entry
                 const entry = {
                     timestamp: timestamp,
                     latitude: lat,
@@ -152,8 +139,6 @@
                 if (telemetryHistory.length > 5)
                     telemetryHistory = telemetryHistory.slice(0, 5);
 
-
-                // Update the table display
                 renderTelemetryTable();
 
             } catch (error) {
@@ -245,11 +230,8 @@
             if (!userId) return;
 
             try {
-                
-                // Try the JWT-authenticated endpoint first
                 let response = await fetch(`/api/user/${userId}/device-data`);
                 
-                // If that fails, fall back to simple device token endpoint
                 if (!response.ok) {
                     console.log('JWT endpoint failed, trying simple endpoint...');
                     response = await fetch(`/api/user/${userId}/device-data-simple`);
@@ -258,13 +240,10 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    // Check alarm status from device data
                     updateAlarmStatus(data);
                     
-                    // Update map with location data
                     updateMapLocation(data);
                     
-                    // Update telemetry history
                     updateTelemetryHistory(data);
                 } else {
                     throw new Error(data.error || 'Failed to fetch data');
@@ -279,7 +258,6 @@
             const statusElement = document.getElementById('alarm-status');
             const toggleBtn = document.getElementById('toggle-alarm-btn');
             
-            // Look for various possible alarm state field names in the telemetry data
             let isArmed = false;
             let isTriggered = false;
             
@@ -291,7 +269,6 @@
             }
         
             
-            // Check for triggered state
             if (deviceData['motion_detected'] && deviceData['motion_detected'][0]) {
                 const value = deviceData['motion_detected'][0].value;
                 if (value === true || value === 'true' || value === 1 || value === '1') {
@@ -299,10 +276,8 @@
                 }
             }
             
-            // Update current state
             currentAlarmState = isArmed;
             
-            // Update UI based on state
             if (isTriggered && isArmed) {
                 statusElement.textContent = 'TRIGGERED!';
                 statusElement.className = 'status-triggered';
@@ -343,7 +318,6 @@
                 
                 if (response.ok) {
                     console.log('Command sent successfully:', result);
-                    // Refresh data after sending command to see the change
                     setTimeout(fetchDeviceData, 2000);
                     return true;
                 } else {
@@ -361,7 +335,6 @@
             const toggleBtn = document.getElementById('toggle-alarm-btn');
             const originalText = toggleBtn.textContent;
             
-            // Disable button during operation
             toggleBtn.disabled = true;
             toggleBtn.textContent = currentAlarmState ? 'Disarming...' : 'Arming...';
             
@@ -369,19 +342,16 @@
                 let success = false;
                 
                 if (currentAlarmState) {
-                    // Currently armed, so disarm
                     success = await sendDeviceCommand('disarmDevice', { 
                         armed: false, 
                     });
                 } else {
-                    // Currently disarmed, so arm
                     success = await sendDeviceCommand('armDevice', { 
                         armed: true, 
                     });
                 }
                 
                 if (success) {
-                    // Update local state immediately for better UX
                     currentAlarmState = !currentAlarmState;
                     const statusElement = document.getElementById('alarm-status');
                     
@@ -399,7 +369,6 @@
             } catch (error) {
                 console.error('Error toggling alarm:', error);
             } finally {
-                // Re-enable button
                 toggleBtn.disabled = false;
                 if (toggleBtn.textContent.includes('...')) {
                     toggleBtn.textContent = originalText;
@@ -407,16 +376,15 @@
             }
         }
 
-        // Initialize the dashboard
+        // Init dashboard
         function init() {
             loadUserInfo();
             initMap();
             fetchDeviceData();
             
-            // Set up automatic refresh every 5 seconds to see state changes quickly
+            // Data refresh
             refreshInterval = setInterval(fetchDeviceData, 5000);
             
-            // Set up event listeners
             document.getElementById('refresh-btn').addEventListener('click', fetchDeviceData);
             document.getElementById('logout-btn').addEventListener('click', logout);
             document.getElementById('toggle-alarm-btn').addEventListener('click', toggleAlarm);
@@ -430,7 +398,6 @@
             window.location.href = '/';
         }
 
-        // Start the dashboard when page loads
         init();
     </script>
 </body>
