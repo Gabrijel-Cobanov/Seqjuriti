@@ -4,41 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Dashboard</title>
-    <link rel="stylesheet" href="/styles/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <link rel="stylesheet" href="/styles/dashboard.css"/>
 </head>
 <body>
-    <div class="dashboard-box">
-        <h1 id="welcome">Loading...</h1>
-        <p>Device data from ThingsBoard:</p>
-        
-        <!-- Telemetry History Section -->
-        <div class="telemetry-history">
-            <h3>Telemetry History (Last 5 Readings)</h3>
-            <div id="telemetry-table-container">
-                <div class="no-data">Loading telemetry history...</div>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <h1>ANTITHEFT</h1>
+        <h2 id="welcome">Loading...</h2>
+        <button id="logout-btn" class="navbar-logout">Logout</button>
+    </nav>
+
+    <!-- Main Dashboard Container -->
+    <div class="dashboard-container">
+        <div class="dashboard-box">
+            
+            
+            <!-- Alarm Controls Section - Now at the top -->
+            <div class="alarm-controls">
+                <h3>Alarm Control</h3>
+                <div class="alarm-status">
+                    <p>Status: <span id="alarm-status">Disarmed</span></p>
+                </div>
+                <div class="alarm-buttons">
+                    <button id="toggle-alarm-btn" class="btn">Arm</button>
+                </div>
             </div>
-        </div>
-        
-        <!-- Map Section -->
-        <div class="map-container">
-            <div class="map-header">Device Location</div>
-            <div id="device-map"></div>
-            <div class="location-info" id="location-info">Location data will appear here when available</div>
-        </div>
-        
-        <div class="controls">
-            <button id="refresh-btn">Refresh Data</button>
-            <button id="logout-btn">Logout</button>
-        </div>
-        
-        <div class="alarm-controls">
-            <h3>Alarm Control</h3>
-            <div class="alarm-status">
-                <p>Status: <span id="alarm-status">Disarmed</span></p>
+            
+            <!-- Telemetry History Section -->
+            <div class="telemetry-history">
+                <h3>Telemetry History (Last 5 Readings)</h3>
+                <div id="telemetry-table-container">
+                    <div class="no-data">Loading telemetry history...</div>
+                </div>
             </div>
-            <div class="alarm-buttons">
-                <button id="toggle-alarm-btn" class="alarm-btn">Arm</button>
+            
+            <!-- Map Section -->
+            <div class="map-container">
+                <div class="map-header">Device Location</div>
+                <div id="device-map"></div>
+                <div class="location-info" id="location-info">Location data will appear here when available</div>
+            </div>
+            
+            <!-- Controls Section - Refresh button now below alarm controls -->
+            <div class="controls">
+                <button id="refresh-btn" class="btn">Refresh Data</button>
             </div>
         </div>
     </div>
