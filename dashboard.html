@@ -6,20 +6,18 @@
     <title>User Dashboard</title>
     <link rel="stylesheet" href="/styles/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-    <style>
-        .status-armed { color: #dc3545; font-weight: bold; }
-        .status-disarmed { color: #28a745; font-weight: bold; }
-        .status-triggered { color: #ff0000; font-weight: bold; animation: blink 1s infinite; }
-        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0.3; } }
-        .alarm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    </style>
 </head>
 <body>
     <div class="dashboard-box">
         <h1 id="welcome">Loading...</h1>
         <p>Device data from ThingsBoard:</p>
-        <div class="data-container">
-            <pre id="device-data">Loading device data...</pre>
+        
+        <!-- Telemetry History Section -->
+        <div class="telemetry-history">
+            <h3>Telemetry History (Last 5 Readings)</h3>
+            <div id="telemetry-table-container">
+                <div class="no-data">Loading telemetry history...</div>
+            </div>
         </div>
         
         <!-- Map Section -->
@@ -52,6 +50,7 @@
         let map = null;
         let marker = null;
         let currentAlarmState = false; // false = disarmed, true = armed
+        let telemetryHistory = []; // Store telemetry history
 
         // Initialize map
         function initMap() {
@@ -96,6 +95,111 @@
             }
         }
 
+        // Update telemetry history table
+        function updateTelemetryHistory(deviceData) {
+            try {
+                // Extract current telemetry data
+                const lat = deviceData.latitude && deviceData.latitude[0] ? parseFloat(deviceData.latitude[0].value) : null;
+                const lng = deviceData.longitude && deviceData.longitude[0] ? parseFloat(deviceData.longitude[0].value) : null;
+                
+                let isArmed = false;
+                if (deviceData['armed'] && deviceData['armed'][0]) {
+                    const value = deviceData['armed'][0].value;
+                    isArmed = value === true || value === 'true' || value === 1 || value === '1' || value === 'armed';
+                }
+                
+                let motionDetected = false;
+                if (deviceData['motion_detected'] && deviceData['motion_detected'][0]) {
+                    const value = deviceData['motion_detected'][0].value;
+                    motionDetected = value === true || value === 'true' || value === 1 || value === '1';
+                }
+                
+                // Get timestamp - use the most recent one available
+                let timestamp = Date.now();
+                if (deviceData.latitude && deviceData.latitude[0] && deviceData.latitude[0].ts) {
+                    timestamp = deviceData.latitude[0].ts;
+                } else if (deviceData.longitude && deviceData.longitude[0] && deviceData.longitude[0].ts) {
+                    timestamp = deviceData.longitude[0].ts;
+                } else if (deviceData.armed && deviceData.armed[0] && deviceData.armed[0].ts) {
+                    timestamp = deviceData.armed[0].ts;
+                } else if (deviceData.motion_detected && deviceData.motion_detected[0] && deviceData.motion_detected[0].ts) {
+                    timestamp = deviceData.motion_detected[0].ts;
+                }
+
+                // Create telemetry entry
+                const entry = {
+                    timestamp: timestamp,
+                    latitude: lat,
+                    longitude: lng,
+                    armed: isArmed,
+                    motionDetected: motionDetected
+                };
+
+            
+                telemetryHistory.unshift(entry);
+                
+                // Keep only last 5 entries
+                if (telemetryHistory.length > 5)
+                    telemetryHistory = telemetryHistory.slice(0, 5);
+
+
+                // Update the table display
+                renderTelemetryTable();
+
+            } catch (error) {
+                console.error('Error updating telemetry history:', error);
+            }
+        }
+
+        // Render the telemetry history table
+        function renderTelemetryTable() {
+            const container = document.getElementById('telemetry-table-container');
+            
+            if (telemetryHistory.length === 0) {
+                container.innerHTML = '<div class="no-data">No telemetry data available</div>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="telemetry-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Latitude</th>
+                            <th>Longitude</th>
+                            <th>Armed</th>
+                            <th>Motion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            telemetryHistory.forEach(entry => {
+                const date = new Date(entry.timestamp).toLocaleString();
+                const lat = entry.latitude !== null ? entry.latitude.toFixed(6) : 'N/A';
+                const lng = entry.longitude !== null ? entry.longitude.toFixed(6) : 'N/A';
+                const armed = entry.armed ? '<span class="status-yes">Yes</span>' : '<span class="status-no">No</span>';
+                const motion = entry.motionDetected ? '<span class="status-yes">Yes</span>' : '<span class="status-no">No</span>';
+
+                tableHTML += `
+                    <tr>
+                        <td class="timestamp">${date}</td>
+                        <td>${lat}</td>
+                        <td>${lng}</td>
+                        <td>${armed}</td>
+                        <td>${motion}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = tableHTML;
+        }
+
         // Get user ID from URL
         function getUserIdFromUrl() {
             const path = window.location.pathname;
@@ -131,7 +235,6 @@
             if (!userId) return;
 
             try {
-                document.getElementById('device-data').textContent = 'Loading...';
                 
                 // Try the JWT-authenticated endpoint first
                 let response = await fetch(`/api/user/${userId}/device-data`);
@@ -145,20 +248,19 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    // Display the raw JSON data
-                    document.getElementById('device-data').textContent = JSON.stringify(data, null, 2);
-                    
                     // Check alarm status from device data
                     updateAlarmStatus(data);
                     
                     // Update map with location data
                     updateMapLocation(data);
+                    
+                    // Update telemetry history
+                    updateTelemetryHistory(data);
                 } else {
                     throw new Error(data.error || 'Failed to fetch data');
                 }
             } catch (error) {
                 console.error('Error fetching device data:', error);
-                document.getElementById('device-data').textContent = `Error: ${error.message}`;
             }
         }
 
